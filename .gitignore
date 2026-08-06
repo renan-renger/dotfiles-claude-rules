@@ -1,0 +1,46 @@
+# Ignore everything by default — new secrets stay private unless explicitly allowed
+*
+
+# Allowlist portable shared config
+!.gitignore
+!README.md
+!SYNC-README.md
+!CLAUDE.md
+!RTK.md
+!contexts/
+!contexts/**
+!settings.json
+!mcp.json
+!commands/
+!commands/**
+!skills/
+!skills/**
+!hooks/
+!hooks/**
+!scripts/
+!scripts/**
+
+# File memory is NOT tracked here. It is personal working notes, not a shared
+# standard, so it lives in a separate private repo (see scripts/link-memory.sh and
+# CLAUDE_MEMORY_REPO). Keeping the deny-by-default `*` above without a memory
+# allowlist is what stops it ever landing in this public repo by accident.
+memory/
+
+# agentmemory skills are installed per-machine (bootstrap-only) via
+#   npx skills add rohitg00/agentmemory -y
+# Keep them OUT of tracked config so upstream owns their lifecycle.
+skills/agentmemory-agents/
+skills/agentmemory-architecture/
+skills/agentmemory-config/
+skills/agentmemory-hooks/
+skills/agentmemory-mcp-tools/
+skills/agentmemory-rest-api/
+skills/commit-context/
+skills/commit-history/
+skills/forget/
+skills/handoff/
+skills/recall/
+skills/recap/
+skills/remember/
+skills/session-history/
+skills/write-agentmemory-skill/

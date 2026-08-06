@@ -1,0 +1,76 @@
+{
+  "permissions": {
+    "allow": [],
+    "defaultMode": "auto"
+  },
+  "model": "opus",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'git commit' && \"$HOME/.claude/hooks/pre-commit-check.sh\" || true"
+          },
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "command -v rtk >/dev/null 2>&1 && rtk hook claude || true"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "\"$HOME/.claude/hooks/agentmemory-start.sh\""
+          },
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "\"$HOME/.claude/hooks/memory-sync.sh\" pull"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "\"$HOME/.claude/hooks/memory-sync.sh\" push"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "caveman@caveman": true,
+    "agentmemory@agentmemory": true
+  },
+  "extraKnownMarketplaces": {
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
+    },
+    "agentmemory": {
+      "source": {
+        "source": "github",
+        "repo": "rohitg00/agentmemory"
+      }
+    }
+  },
+  "effortLevel": "high",
+  "tui": "fullscreen",
+  "theme": "dark",
+  "skipAutoPermissionPrompt": true,
+  "agentPushNotifEnabled": true
+}
