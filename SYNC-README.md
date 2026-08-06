@@ -15,7 +15,7 @@ the sync hook stays silent, and Claude Code keeps memory in its default location
 - `CLAUDE.md` — **global** instructions (universal rules only; loads in every context)
 - `contexts/` — per-context rule files that stack on top of the global ones
 - `settings.json` — model, theme, permissions, enabled plugins
-- `mcp.json`
+- MCP servers are NOT tracked here — see the agentmemory section
 - `commands/` — custom slash commands
 - `skills/` — user skills
 - `hooks/` — hook scripts
@@ -215,15 +215,19 @@ without touching its files. Re-read that list if this repo's visibility ever cha
 
 [agentmemory](https://github.com/rohitg00/agentmemory) gives the agent persistent,
 semantically-searchable memory via a local server (REST on `:3111`, MCP shim).
-Tracked in this repo as `mcp.json`, the plugin entry in `settings.json`, a
-SessionStart hook, and the sync scripts; skills and secrets stay per-machine.
+Tracked in this repo as the plugin entry in `settings.json`, a SessionStart hook, and
+the sync scripts; skills and secrets stay per-machine.
+
+**The MCP server itself is not tracked here.** User-scoped servers live in
+`~/.claude.json`, which also holds per-project runtime state, so it cannot be
+symlinked into a shared repo. Add it per machine instead (idempotent).
 
 **Wire it on a new machine:**
 
 ```bash
 # 1. Add the MCP server to this machine's live config (~/.claude.json).
-#    Regenerates the exact block tracked in mcp.json; idempotent.
 npx -y @agentmemory/agentmemory@latest connect claude-code
+#    or: claude mcp add --scope user agentmemory -- npx -y @agentmemory/mcp
 
 # 2. Install the skills that teach the agent WHEN to call the memory tools
 #    (bootstrap-only — intentionally gitignored, not vendored).

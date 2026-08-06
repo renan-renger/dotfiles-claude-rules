@@ -15,10 +15,9 @@ credentials and no project data.
 | `contexts/jabutikba-games/CLAUDE.md` | Unreal Engine / C++ rules. Loads only under that directory tree, stacking on top of global. |
 | `RTK.md` | `rtk` (token-saving CLI proxy) reference, included from `CLAUDE.md`. |
 | `settings.json` | Model, hooks, plugins, theme. |
-| `mcp.json` | MCP server definitions (values come from env vars, never committed secrets). |
 | `hooks/` | Session and tool hooks: agentmemory startup, memory sync, a pre-commit guard against bulk permission-only changes. |
 | `scripts/` | Symlink wiring and memory index tooling. |
-| `skills/` | Shared skills (e.g. `pr-review`). |
+| `skills/` | Shared skills, when we have them. |
 | `SYNC-README.md` | The long-form reference for how the symlinking works and why. |
 
 Rules stack: deeper files extend or override shallower ones, and the deepest file
@@ -59,6 +58,22 @@ how `settings.json` once sat four commits behind the repo while both files looke
 fine in isolation.
 
 Restart Claude Code afterwards — hook and MCP changes only take effect in a new session.
+
+### MCP servers
+
+MCP config cannot be symlinked from this repo: user-scoped servers live in
+`~/.claude.json`, which also holds per-project runtime state and is not shareable.
+Run this once per machine instead:
+
+```bash
+claude mcp add --scope user agentmemory -- npx -y @agentmemory/mcp
+```
+
+Its `AGENTMEMORY_URL` / `AGENTMEMORY_SECRET` / `AGENTMEMORY_TOOLS` come from your
+environment, so no secret is ever committed. For a server that should apply to one
+project and be shared with everyone working on it, use `--scope project` instead —
+that writes a `.mcp.json` in the project repo, which is the mechanism meant for
+version control.
 
 ### Optional: private memory repo
 
