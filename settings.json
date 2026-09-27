@@ -12,11 +12,6 @@
           {
             "type": "command",
             "shell": "bash",
-            "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'git commit' && \"$HOME/.claude/hooks/pre-commit-check.sh\" || true"
-          },
-          {
-            "type": "command",
-            "shell": "bash",
             "command": "command -v rtk >/dev/null 2>&1 && rtk hook claude || true"
           }
         ]
