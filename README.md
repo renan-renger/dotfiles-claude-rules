@@ -15,7 +15,7 @@ credentials and no project data.
 | `contexts/jabutikba-games/CLAUDE.md` | Unreal Engine / C++ rules. Loads only under that directory tree, stacking on top of global. |
 | `RTK.md` | `rtk` (token-saving CLI proxy) reference, included from `CLAUDE.md`. |
 | `settings.json` | Model, hooks, plugins, theme. |
-| `hooks/` | Session and tool hooks: agentmemory startup, memory sync, a pre-commit guard against bulk permission-only changes. |
+| `hooks/` | Session hooks: agentmemory startup and memory sync. |
 | `scripts/` | Symlink wiring and memory index tooling. |
 | `skills/` | Shared skills, when we have them. |
 | `SYNC-README.md` | The long-form reference for how the symlinking works and why. |
