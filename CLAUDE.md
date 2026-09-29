@@ -74,8 +74,8 @@ Never commit directly to `main` or `master`.
 If the current branch is `main` or `master`, create a new branch before starting
 work.
 
-**Exception:** `dotfiles-claude-rules` and `dotfiles-claude-memory` (auto-synced
-by hook) may be committed straight to `main`.
+**Exception:** `dotfiles-claude-memory` (auto-synced by hook) may be committed
+straight to `main`. `dotfiles-claude-rules` is protected: changes go through a PR.
 
 Branch naming: `<type>/<descriptive-name>`, where the type matches the intent of
 the work and the name describes it clearly. No ticket IDs.
