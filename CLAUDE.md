@@ -57,7 +57,8 @@ cleverness.
 
 ## 5. Opportunistic Code Smell Fixes
 
-When modifying existing code, resolve smells that do not alter behavior — silently.
+When modifying existing code, resolve behavior-neutral smells in lines you are
+already changing. No separate approval, but list them in the diff.
 
 If fixing a smell requires a behavioral change:
 - Notify the developer.
@@ -72,6 +73,9 @@ Never commit directly to `main` or `master`.
 
 If the current branch is `main` or `master`, create a new branch before starting
 work.
+
+**Exception:** `dotfiles-claude-rules` and `dotfiles-claude-memory` (auto-synced
+by hook) may be committed straight to `main`.
 
 Branch naming: `<type>/<descriptive-name>`, where the type matches the intent of
 the work and the name describes it clearly. No ticket IDs.
@@ -96,7 +100,8 @@ The name must genuinely match the chosen type.
 
 ## 8. Testing
 
-Always run the full test suite after making changes.
+Run the project's test suite after making changes. Where a project has none
+(e.g. Unreal), its own `CLAUDE.md` defines the verification step.
 
 When modifying a constructor signature, grep all test files that instantiate the
 class and update them before committing. Do not commit with failing tests.
@@ -123,26 +128,8 @@ MCP connections in the same session they were configured.
 ## 11. Communication Style — Caveman Mode
 
 Default to caveman mode (full intensity) in all responses unless "stop caveman"
-or "normal mode".
-
-**Rules:**
-- Drop articles (a/an/the), filler words (just/really/basically/actually/simply),
-  pleasantries (sure/certainly/of course/happy to), and hedging language.
-- Fragments OK. Short synonyms (big not extensive, fix not "implement a solution for").
-- Technical terms stay exact. Code blocks unchanged.
-- Pattern: `[thing] [action] [reason]. [next step].`
-
-**Intensity levels** (switch with `/caveman lite|full|ultra`):
-- `full` — drop articles, fragments OK, short synonyms. Default.
-
-**Suspend caveman automatically for:**
-- Security warnings
-- Irreversible action confirmations
-- Multi-step sequences where fragment order risks misread
-- When developer asks to clarify or repeats a question
-
-Resume caveman immediately after the clear part is done. **Never revert** after
-many turns or due to topic drift. Active until explicitly disabled.
+or "normal mode". The `caveman` plugin injects the full rules each session; they
+are not repeated here.
 
 ---
 
@@ -152,8 +139,8 @@ Whenever the developer asks to save something to memory ("remember this", "save
 this", "note that", "don't forget", etc.), persist it to **both** stores — never
 just one:
 
-1. **File memory** — `~/.claude/projects/<cwd>/memory/*.md` plus the `MEMORY.md`
-   index line.
+1. **File memory** — `~/.claude/projects/<cwd>/memory/*.md`. Write a good
+   `description:` in the frontmatter: `MEMORY.md` is generated from it.
 2. **agentmemory** — via `mcp__agentmemory__memory_save` (load it first with
    `ToolSearch("select:mcp__agentmemory__memory_save")` if it isn't already
    available). Pass the canonical project identifier, an appropriate `type`
@@ -163,11 +150,14 @@ just one:
 `project` is **mandatory** on every manual save, never optional. One store serves
 all projects, and recall filters and ranks by that tag — an untagged memory is
 dead weight nothing will surface. The canonical identifier is the repo's git
-toplevel basename (`MadorasRebirth`, `dotfiles-claude`), which is exactly what the
+toplevel basename (`MadorasRebirth`, `dotfiles-claude-rules`), which is exactly what the
 capture hooks tag automatically; use that spelling, not a path or a display name.
 
 Mirror the same curated item into both. This is keyed to the developer's explicit
 save request — no separate reminder is needed.
+
+Deleting or correcting a memory applies to both stores. Confirm before deleting
+from agentmemory.
 
 ---
 

@@ -3,15 +3,15 @@
 These rules **add to** the global rules. They apply only under
 `devbox/source/jabutikba-games/`.
 
-This is a looser, personal context: no task-management integration, no automated
-review process, relaxed branch and git workflow beyond the global baseline.
+This is a looser, personal context: no task-management integration and no
+automated review process. Repo-level `CLAUDE.md` files are stricter and win.
 
 ---
 
 ## 1. Internationalization (i18n)
 
 - **If the project has i18n:** all user-facing messages go through the project's
-  i18n mechanism. Languages: **pt-BR** and **en-US**.
+  i18n mechanism, in the languages the project ships.
 - **If the project has no i18n:** write all messages directly in **pt-BR**.
 
 **Pull requests are always written in pt-BR** — both title and body. The team
@@ -30,22 +30,6 @@ in PIE, and assist with the investigation where applicable.
 
 ---
 
-## 3. Hardware Note — Intel iGPU laptop (13620H / UHD RPL-P)
-
-This laptop CANNOT run Unreal Engine 5.8 projects requiring Vulkan SM6.
-Intel Iris Xe / UHD iGPU lacks `VK_EXT_mesh_shader` → SM6 profile fails → editor won't open.
-Do NOT retry. Do NOT edit shared project config to force SM5 (adds team-wide cook cost / package bloat).
-
-GPUs that DO support UE5.8 SM6 (need `VK_EXT_mesh_shader`):
-- NVIDIA: RTX 20-series (Turing) or newer. GTX 10-series and older: NO.
-- AMD dGPU: RX 6000M (RDNA2) or newer. RX 5000M (RDNA1): NO.
-- AMD iGPU: 680M / 780M (RDNA2/3, Ryzen 6000+) work iGPU-only. Vega (Ryzen 4000/5000): NO.
-- Intel: Arc dGPU yes; Lunar Lake Xe2 iGPU yes; Iris Xe / UHD (this laptop) NO.
-
-Linux: driver must expose the extension — keep Mesa / NVIDIA driver current.
-
----
-
 ## 4. No Live Coding on Linux
 
 Do NOT use C++ Live Coding on a Linux machine — it does not work. Triggering it
@@ -61,56 +45,24 @@ To pick up C++ changes on Linux:
 
 ## 5. StateTree Authoring
 
-A **Global Task must NEVER call `FinishTask`**. Global tasks are meant to run for
-the entire lifetime of the tree; a global task that finishes (succeeds or fails)
-**terminates the whole StateTree** — it stops immediately, enters no state, and
-the owning pawn goes brain-dead (frozen). One-shot tasks that call `FinishTask`
-(e.g. a "look at actor" that rotates once and finishes) belong as **per-state
-tasks**, not in Global Tasks.
+- **A Global Task must NEVER call `FinishTask`.** It terminates the whole tree:
+  no state is entered and the pawn freezes. One-shot tasks that finish belong
+  as per-state tasks. Global Tasks that stay `Running` are fine.
+- **An empty state is lethal under scheduled tick.** With no task nothing calls
+  `FinishTask`, so component tick is never re-armed and the pawn parks while
+  the tree still reports `RUNNING`. An empty state is not a no-op state.
+- **When duplicating a tree, verify each state's exit contract.** A state that
+  exited through a task's same-frame `FinishTask` becomes a permanent trap once
+  that task is stripped. Delete the purposeless state; do not prop it up with
+  a filler task.
+- **`run_status` / `is_running()` do not tell live from dead** — a dormant tree
+  reports `RUNNING`. Probe `is_component_tick_enabled()` over real wall-time
+  instead: healthy flips, dead is stuck `False`.
+- **Rank log warnings by onset correlation, not count, and verify each fix by
+  its own log signature** — distinct causes stack into the same symptom.
 
-Symptom in logs (`LogStateTree` Verbose): `Start Temporary Evaluators & Global
-tasks while trying to select linked asset: <ST>` immediately followed by `Stop
-Temporary Evaluators & Global tasks` with **no** `Enter state Root...` line — the
-tree selected nothing. A correctly-placed fallback state cannot rescue this,
-because the failure happens above state selection. Compare against a working tree
-that reaches `Enter state {<ST>}Root...`.
-
-Global Tasks that stay `Running` (never call `FinishTask`) are fine as globals
-(e.g. a "set refs" task that populates parameters on enter and idles).
-
-**An empty state is lethal under scheduled tick.** A state with no task has
-nothing to call `FinishTask`, so `On State Completed` never fires and the
-scheduler gets no reason to re-arm component tick — the pawn parks indefinitely
-while the tree still reports `RUNNING`. Escapes only if something incidental
-re-arms tick (measured dwells: 2.8s, 4.3s, 12s, 66s, never). An empty state is
-**not** a no-op state.
-
-**When duplicating a tree, verify each state's exit contract, not just its
-structure.** Duplicating a tree copies its states but not the invariants they
-relied on: a state whose exit came from a task's same-frame `FinishTask` becomes
-a permanent trap the moment that task is stripped. Before deleting a task from a
-duplicated tree, establish what completed the state that held it. Prefer
-deleting the now-purposeless state over propping it up with a filler task.
-
-**Diagnosing a frozen ST pawn.** `run_status` / `is_running()` / `is_active()`
-do **not** discriminate live from dead — a dormant tree reports `RUNNING`. Use a
-**time-series** probe instead: sample `is_component_tick_enabled()` (or actor
-position) across real wall-time — healthy flips `True`/`False` frame to frame,
-dead is stuck `False`. Standard recipe, given ST assets are MCP-blind
-(see the `statetree-mcp-blind` memory): `LogStateTree` Verbose for structure and
-the transition trail, plus `execute_python` against
-`UnrealEditorSubsystem.get_game_world()` for component runtime state (this works
-mid-PIE; content assets only load with PIE **stopped**).
-
-**Rank log warnings by onset correlation, not by count.** A frozen-pawn repro
-will surface loud pre-existing noise that predates the symptom and is harmless.
-Timestamp-align each warning's first occurrence against the moment behaviour
-stopped before chasing it.
-
-**Verify each fix by its own log signature.** These failures stack — distinct
-causes produce an identical frozen-pawn symptom. Close a fix when *its* specific
-signature is gone from a fresh log, never when the symptom disappears, or two
-bugs will read as one failed fix.
+Log signatures, full recipe, measured dwells: memory
+`statetree-global-task-finishtask`, `statetree-frozen-pawn-playbook`.
 
 ---
 
@@ -131,8 +83,9 @@ only trustworthy backup for a `.uasset`.** Verify a restore by content hash
 against `HEAD`, not by file size alone.
 
 To change DataTable values: **edit by hand in the editor UI.** Reading through
-MCP (`get_rows_as_json`, `get_row_names`, `get_column_names`) is safe and
-useful — only writes are banned.
+MCP (`get_row_names`, `get_column_names`) is safe. `get_rows_as_json` is
+read-only but lossy: nested maps come back as `{}`. For a faithful read use
+`export_data_table_to_json_string` via `execute_python`.
 
 **After any timed-out MCP write, absence of change is not proof of safety.** The
 editor may still be mid-write when the socket times out; the save can land
@@ -144,31 +97,22 @@ then re-check `git status` and compare hashes.
 
 ## 7. A Struct Gaining a Field Is a Data-Migration Event
 
-Adding a field to a struct backing a DataTable is not a schema tweak — every
-existing row silently receives the default (`0` / empty), and rows nobody
-remembers to re-author keep it. This fails **silently**: no error, no warning,
-no compile failure, and often a partially-working feature that masks the gap.
-
-Precedent: PR #1418 added `Cast Amount` / `Delay Between Casts` to
-`Struct_SkillCastConfig` and re-imported `DT_SkillsNew` from a backup JSON. Every
-skill was re-authored to `Cast Amount 1` except `Skill_Arrow`, whose `0` made
-`GA_Base`'s `For Loop  FirstIndex=1  LastIndex=CurrentCastAmount` run zero
-iterations — so the player's basic attack spawned projectiles that were never
-given velocity. Animation played, nothing fired, for a full day. The same
-re-import also silently dropped `Pierce_Base` / `GE_Piercing` from the rows.
+Adding a field to a struct backing a DataTable gives every existing row the
+default (`0` / empty), silently: no error, no warning, no compile failure, often
+a partially-working feature that hides the gap (PR #1418: `Skill_Arrow` got
+`Cast Amount 0`, so the basic attack fired nothing).
 
 When adding or changing a field on a DataTable row struct:
 
-1. Diff row data **before and after**, not just the struct. The offline recipe
-   works without the editor:
+1. Diff row data **before and after**, not just the struct. Offline recipe:
    `git show <rev>:<path> | git lfs smudge | strings | sort -u`, then `comm`
-   against the new version. That is what surfaced both the `Pierce_Base` loss
-   and the `SkillConfig_4_` → `SkillConfig_7_` property re-index.
-2. State the invariant the new field implies and check every row against it.
-   For the case above: *any row with `Projectile Amount > 0` must have
-   `Cast Amount >= 1`.*
+   against the new version.
+2. State the invariant the new field implies and check every row against it
+   (e.g. *any row with `Projectile Amount > 0` must have `Cast Amount >= 1`*).
 3. Treat a re-import from exported JSON/CSV as suspect until row survival is
    verified — see §6.
+
+Full case study: memory `skill-arrow-cast-amount-migration`.
 
 ---
 
@@ -206,27 +150,3 @@ many times as that work needs**. Do not stop to ask again per build cycle.
 Say so before the first close, so unsaved in-editor work can be saved. This
 covers the editor process only — it does not extend to any other irreversible
 action.
-
----
-
-## 10. Squash on Merge — `unreal-mcp` Only
-
-In the **`unreal-mcp`** repo, always squash when landing work on `main`:
-`gh pr merge --squash`, or the Squash button. Never `--merge`, never
-`--rebase`.
-
-It is a fork that tracks `upstream/main` (`GenOrca/unreal-mcp`). A linear,
-one-commit-per-change `main` stays diffable against upstream; a chain of
-intermediate commits per feature makes comparing and re-syncing noisy.
-
-Keep authoring work as several focused commits on the feature branch — they
-review well and revert cleanly. The squash happens only at merge time, so the
-squashed message must carry the substance of every commit it absorbs, not a
-concatenation of subjects.
-
-This does not weaken the global "never rebase feature branches" rule: that one
-is about rewriting a branch's own history, this one is about how the branch
-lands on `main`.
-
-**Scope: `unreal-mcp` only.** Other repos under this context keep the global
-merge workflow unless they say otherwise.

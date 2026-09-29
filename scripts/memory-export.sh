@@ -3,7 +3,7 @@
 #
 #   ./scripts/memory-export.sh                      # everything -> ~/agentmemory-export-<ts>.json
 #   ./scripts/memory-export.sh out.json             # everything -> out.json
-#   ./scripts/memory-export.sh out.json --only MadorasRebirth,dotfiles-claude
+#   ./scripts/memory-export.sh out.json --only MadorasRebirth,dotfiles-claude-rules
 #   ./scripts/memory-export.sh out.json --exclude some-employer-repo
 #
 # --only / --exclude filter memories and sessions by their `project` tag. Untagged
